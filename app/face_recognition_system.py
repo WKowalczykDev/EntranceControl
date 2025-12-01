@@ -1,7 +1,6 @@
 from deepface import DeepFace
 import os
 
-
 def verify_face(test_img: str, expected_person: str, threshold: float = 0.4):
     db_path = "../reference_faces"  # katalog z folderami osób
 

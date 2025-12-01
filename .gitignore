@@ -10,7 +10,7 @@ __pycache__/
 .venv1/
 
 # Zdjęcia referencyjne
-reference_faces/
+app/reference_faces/
 *.jpg
 *.png
 
