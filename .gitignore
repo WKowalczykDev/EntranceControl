@@ -10,9 +10,12 @@ __pycache__/
 .venv1/
 
 # Zdjęcia referencyjne
-app/reference_faces/
+reference_faces/
 *.jpg
 *.png
 
 # Inne dane i logi
 *.log
+
+#env files
+.env

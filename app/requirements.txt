@@ -1,0 +1,20 @@
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
+pydantic==2.5.0
+python-multipart==0.0.6
+qrcode[pil]==7.4.2
+
+# Face recognition dependencies
+requests>=2.27.1
+numpy>=1.14.0
+pandas>=0.23.4
+Pillow>=5.2.0
+opencv-python>=4.5.5.64
+tensorflow==2.15.0
+keras==2.15.0
+tf-keras>=2.15.0
+deepface>=0.0.79
+mtcnn>=0.1.0
+retina-face>=0.0.14

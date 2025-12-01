@@ -1,0 +1,52 @@
+services:
+  # Baza danych PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    container_name: qr_postgres
+    environment:
+      POSTGRES_USER: qruser
+      POSTGRES_PASSWORD: qrpass123
+      POSTGRES_DB: qr_database
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qruser -d qr_database"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Aplikacja FastAPI
+  fastapi_app:
+    build: ./app
+    container_name: qr_face_app
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app
+      - ./reference_faces:/app/reference_faces
+      - ./uploads:/app/uploads
+    environment:
+      DATABASE_URL: postgresql://qruser:qrpass123@postgres:5432/qr_database
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  # GUI pgAdmin
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: qr_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+volumes:
+  postgres_data:
+  pgadmin_data:
