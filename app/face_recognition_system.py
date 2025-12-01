@@ -1,7 +1,7 @@
 from deepface import DeepFace
 import os
 
-db_path = "reference_faces"      # katalog z folderami osób
+db_path = "reference_faces"  # katalog z folderami osób
 test_img = "test_image.jpg"
 
 # Ustawienie progu – zależy od modelu, domyślnie DeepFace go stosuje,
