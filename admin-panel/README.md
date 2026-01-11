@@ -1,16 +1,37 @@
-# React + Vite
+# Admin Panel - System Zarządzania Pracownikami
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Prosta i nowoczesna aplikacja SPA do zarządzania bazą pracowników, stworzona w oparciu o React 19 i Tailwind CSS v4.
 
-Currently, two official plugins are available:
+## Funkcjonalności
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **CRUD Pracowników:** Przeglądanie, dodawanie, edycja i usuwanie rekordów.
+- **Interfejs:** Responsywny układ z wykorzystaniem najnowszych standardów CSS.
+- **Komponenty:** Dynamiczna tabela, modale edycji oraz system ikon.
 
-## React Compiler
+## Wykorzystane technologie
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- React 19
+- Vite
+- Tailwind CSS v4
+- Lucide React
 
-## Expanding the ESLint configuration
+## Instalacja i uruchomienie
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+1. Zainstaluj wymagane pakiety:
+npm install
+
+2. Uruchom serwer deweloperski:
+npm run dev
+
+3. Zbuduj wersję produkcyjną:
+npm run build
+
+Struktura plików:
+src/
+├── components/
+│   ├── EmployeeModal.jsx   # Formularz dodawania/edycji
+│   ├── EmployeeRow.jsx     # Wiersz tabeli
+│   ├── EmployeeTable.jsx   # Główna tabela
+│   └── Header.jsx          # Nagłówek aplikacji
+├── App.jsx                 # Główny widok i logika stanu
+├── index.css               # Importy Tailwind CSS
