@@ -1,5 +1,8 @@
-# IDE
-.idea/*
+# IDE i Systemowe
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
 
 # Python cache
 __pycache__/
@@ -8,14 +11,28 @@ __pycache__/
 # Wirtualne środowisko
 .venv/
 .venv1/
+venv/
+env/
 
-# Zdjęcia referencyjne
+# === BAZA DANYCH (BARDZO WAŻNE) ===
+# Blokujemy wysyłanie samej bazy danych na GitHuba
+postgres_data/
+pgadmin_data/
+
+# === PLIKI TYMCZASOWE APLIKACJI ===
+# Folder z wygenerowanymi kodami QR i zdjęciami z bramki
+app/uploads/
+uploads/
+
+# Folder ze zdjęciami referencyjnymi (chyba że chcesz je trzymać na GitHubie jako przykłady - wtedy usuń tę linię)
 app/reference_faces/
+reference_faces/
+
+# Blokujemy konkretne rozszerzenia w głównym katalogu (opcjonalne)
 *.jpg
 *.png
-
-# Inne dane i logi
 *.log
 
-#env files
+# === BEZPIECZEŃSTWO ===
+# Plik ze zmiennymi środowiskowymi (hasła!)
 .env
