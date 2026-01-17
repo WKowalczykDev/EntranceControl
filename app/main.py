@@ -6,6 +6,7 @@ import shutil
 import os
 import qrcode
 from io import BytesIO
+from fastapi.middleware.cors import CORSMiddleware
 
 # Importy z Twojego projektu
 from database import engine, get_db
@@ -17,8 +18,20 @@ from face_recognition_system import verify_face
 
 # Tworzenie tabel (jeśli nie istnieją)
 Base.metadata.create_all(bind=engine)
+app = FastAPI(title="QR + Face Recognition System")
 
-app = FastAPI(title="QR + Face Recognition System (Complex DB)")
+origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Konfiguracja folderów
 UPLOAD_DIR = "uploads"
@@ -232,3 +245,27 @@ async def verify_entry(
             success=False,
             message=f"Odmowa dostępu. QR: {wynik_qr}, Twarz: {'OK' if is_matched else 'Mismatch'}"
         )
+
+@app.get("/pracownicy")
+async def pobierz_pracownikow(db: Session = Depends(get_db)):
+    """Pobiera listę wszystkich pracowników do tabeli"""
+    return db.query(Pracownik).all()
+
+@app.delete("/pracownik/{id}")
+async def usun_pracownika(id: int, db: Session = Depends(get_db)):
+    """Usuwa pracownika"""
+    pracownik = db.query(Pracownik).filter(Pracownik.id == id).first()
+    if not pracownik:
+        raise HTTPException(status_code=404, detail="Pracownik nie istnieje")
+
+    db.delete(pracownik)
+    db.commit()
+    return {"msg": "Usunięto"}
+
+@app.get("/logi/")
+async def pobierz_logi(pracownik_id: int, db: Session = Depends(get_db)):
+    """Pobiera historię wejść dla konkretnego pracownika (do raportów)"""
+    # Zwracamy logi posortowane od najnowszych
+    logi = db.query(ProbaWejscia).filter(ProbaWejscia.pracownik_id == pracownik_id)\
+             .order_by(ProbaWejscia.data_czas.desc()).all()
+    return logi
