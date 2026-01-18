@@ -25,14 +25,21 @@ services:
     ports:
       - "8000:8000"
     volumes:
+      # 1. Montujemy kod aplikacji (dla hot-reload)
       - ./app:/app
-      - ./reference_faces:/app/reference_faces
-      - ./uploads:/app/uploads
+
+      # 2. ZMIANA: Montujemy foldery z katalogu 'Database' hosta
+      #    do odpowiednich ścieżek w kontenerze
+      - ./Database/reference_faces:/app/reference_faces
+      - ./Database/uploads:/app/uploads
+
     environment:
+      # Ważne: DeepFace tworzy pliki .pkl, upewnij się, że ma prawa zapisu (zazwyczaj root w kontenerze je ma)
       DATABASE_URL: postgresql://qruser:qrpass123@postgres:5432/qr_database
     depends_on:
       postgres:
         condition: service_healthy
+    # Dodajemy --reload, aby zmiany w kodzie były widoczne natychmiast
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
   # GUI pgAdmin
