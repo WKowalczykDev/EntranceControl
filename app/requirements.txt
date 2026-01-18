@@ -18,3 +18,4 @@ tf-keras>=2.15.0
 deepface>=0.0.79
 mtcnn>=0.1.0
 retina-face>=0.0.14
+scipy>=1.7.0

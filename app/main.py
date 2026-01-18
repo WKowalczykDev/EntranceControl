@@ -14,7 +14,7 @@ from models import Base, Administrator, Pracownik, Przepustka, Bramka, ProbaWejs
 from schemas import PracownikCreate, PracownikResponse, PrzepustkaCreate, VerificationResponse, BramkaCreate
 
 # System rozpoznawania twarzy
-from face_recognition_system import verify_face
+from face_recognition_system import verify_face, update_person_embedding
 
 # Inicjalizacja bazy danych
 Base.metadata.create_all(bind=engine)
@@ -122,9 +122,9 @@ async def dodaj_zdjecie_referencyjne(
     db.add(db_zdjecie)
     db.commit()
 
+    update_person_embedding(pracownik.id_pracownika)
+
     return {"msg": "Zdjęcie dodane", "path": sciezka}
-
-
 @app.delete("/pracownik/{id}")
 async def usun_pracownika(id: int, db: Session = Depends(get_db)):
     pracownik = db.query(Pracownik).filter(Pracownik.id == id).first()

@@ -1,0 +1,34 @@
+@baseUrl = http://localhost:8000
+@contentType = application/json
+
+### 1. SETUP: Tworzenie Bramki (Bramka wejściowa)
+# Endpoint: /setup/bramka
+# Cel: Utworzenie punktu kontrolnego, który będzie używany przy weryfikacji.
+POST {{baseUrl}}/setup/bramka
+Content-Type: {{contentType}}
+
+{
+  "nazwa": "Bramka Główna",
+  "lokalizacja": "Wejście A"
+}
+
+> {%
+    client.global.set("bramkaId", response.body.id);
+    client.log("Utworzono bramkę ID: " + response.body.id);
+%}
+
+### 2. SETUP: Tworzenie Administratora
+# Endpoint: /setup/admin
+# Cel: Stworzenie użytkownika technicznego wymaganego do dodawania pracowników.
+# Logika w kodzie: Sprawdza czy admin istnieje, jeśli nie - tworzy domyślnego.
+POST {{baseUrl}}/setup/admin
+Content-Type: {{contentType}}
+
+> {%
+    // Zakładamy, że pierwszy admin ma ID 1, ale API zwraca ID w odpowiedzi
+    if (response.body.id) {
+        client.global.set("adminId", response.body.id);
+    } else {
+        client.global.set("adminId", 1); // Fallback jeśli admin już istniał
+    }
+%}
