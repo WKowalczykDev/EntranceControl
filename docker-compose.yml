@@ -48,6 +48,16 @@ services:
       - postgres
     volumes:
       - pgadmin_data:/var/lib/pgadmin
+
+  # Frontend
+  frontend:
+    build: ./admin-panel
+    container_name: admin_panel
+    ports:
+      - "5173:80"
+    depends_on:
+      - fastapi_app
+
 volumes:
   postgres_data:
   pgadmin_data:
