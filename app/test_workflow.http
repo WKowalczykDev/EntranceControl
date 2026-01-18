@@ -1,0 +1,164 @@
+@baseUrl = http://localhost:8000
+@contentType = application/json
+
+### 1. SETUP: Tworzenie Bramki (Bramka wejściowa)
+# Endpoint: /setup/bramka
+# Cel: Utworzenie punktu kontrolnego, który będzie używany przy weryfikacji.
+POST {{baseUrl}}/setup/bramka
+Content-Type: {{contentType}}
+
+{
+  "nazwa": "Bramka Główna",
+  "lokalizacja": "Wejście A"
+}
+
+> {%
+    client.global.set("bramkaId", response.body.id);
+    client.log("Utworzono bramkę ID: " + response.body.id);
+%}
+
+### 2. SETUP: Tworzenie Administratora
+# Endpoint: /setup/admin
+# Cel: Stworzenie użytkownika technicznego wymaganego do dodawania pracowników.
+# Logika w kodzie: Sprawdza czy admin istnieje, jeśli nie - tworzy domyślnego.
+POST {{baseUrl}}/setup/admin
+Content-Type: {{contentType}}
+
+> {%
+    // Zakładamy, że pierwszy admin ma ID 1, ale API zwraca ID w odpowiedzi
+    if (response.body.id) {
+        client.global.set("adminId", response.body.id);
+    } else {
+        client.global.set("adminId", 1); // Fallback jeśli admin już istniał
+    }
+%}
+
+### 3. PRACOWNIK: Dodanie nowego pracownika
+# Endpoint: /pracownik
+# Cel: Rejestracja pracownika w bazie i utworzenie dla niego folderu w 'reference_faces'.
+# Wymaga: ID administratora (z poprzedniego kroku).
+POST {{baseUrl}}/pracownik
+Content-Type: {{contentType}}
+
+{
+  "imie": "Jan",
+  "nazwisko": "Kowalski",
+  "id_pracownika": "jan_kowalski_001",
+  "email": "jan.kowalski@firma.pl",
+  "stanowisko": "Programista",
+  "administrator_id": {{adminId}},
+  "data_zatrudnienia": "2024-01-01"
+}
+
+> {%
+    client.global.set("pracownikDbId", response.body.id);
+    client.global.set("pracownikStringId", response.body.id_pracownika);
+    client.log("Utworzono pracownika: " + response.body.imie + " (DB ID: " + response.body.id + ")");
+%}
+
+### 4. ZDJĘCIA: Wgranie zdjęcia referencyjnego
+# Endpoint: /pracownik/zdjecie
+# Cel: Wgranie zdjęcia twarzy ("wzorca"), z którym będą porównywane osoby na bramce.
+# Format: multipart/form-data.
+# UWAGA: Upewnij się, że plik 'face_ref.jpg' istnieje.
+POST {{baseUrl}}/pracownik/zdjecie
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="pracownik_id"
+
+{{pracownikDbId}}
+--boundary
+Content-Disposition: form-data; name="plik"; filename="face_ref.jpg"
+Content-Type: image/jpeg
+
+< ./face_ref.jpg
+--boundary--
+
+### 5. PRZEPUSTKA: Generowanie QR
+# Endpoint: /przepustka/generuj
+# Cel: Wygenerowanie przepustki ważnej przez rok.
+# Zwraca: Obraz PNG (ignorujemy go w teście automatycznym, interesuje nas sam fakt utworzenia w bazie).
+POST {{baseUrl}}/przepustka/generuj
+Content-Type: {{contentType}}
+
+{
+  "pracownik_id": {{pracownikDbId}},
+  "data_waznosci": "2025-12-31"
+}
+
+### 6. WERYFIKACJA: Próba wejścia (Pozytywna)
+# Endpoint: /verify
+# Cel: Symulacja podejścia do bramki.
+# Parametry:
+#   - bramka_id: ID utworzonej bramki.
+#   - qr_data: Treść kodu QR. Na podstawie pliku main.py wiemy, że format to "UID:{id_pracownika}".
+#   - face_image: Zdjęcie z kamery na bramce.
+POST {{baseUrl}}/verify
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="bramka_id"
+
+{{bramkaId}}
+--boundary
+Content-Disposition: form-data; name="qr_data"
+
+UID:{{pracownikStringId}}
+--boundary
+Content-Disposition: form-data; name="face_image"; filename="face_verify.jpg"
+Content-Type: image/jpeg
+
+< ./face_verify.jpg
+--boundary--
+
+> {%
+    client.test("Status is Granted", function() {
+        client.assert(response.body.success === true, "Wstęp powinien być przyznany");
+        client.assert(response.body.confidence > 0, "Powinno zwrócić poziom pewności (confidence)");
+    });
+%}
+
+### 7. WERYFIKACJA: Próba wejścia (Negatywna - Zły QR)
+# Cel: Sprawdzenie czy system odrzuci błędny kod QR, nawet przy poprawnej twarzy.
+POST {{baseUrl}}/verify
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="bramka_id"
+
+{{bramkaId}}
+--boundary
+Content-Disposition: form-data; name="qr_data"
+
+UID:NIEISTNIEJACY_KOD_QR
+--boundary
+Content-Disposition: form-data; name="face_image"; filename="face_verify.jpg"
+Content-Type: image/jpeg
+
+< ./face_verify.jpg
+--boundary--
+
+> {%
+    client.test("Status is Denied", function() {
+        client.assert(response.body.success === false, "Wstęp powinien być odrzucony");
+        client.assert(response.body.message.includes("INVALID"), "Komunikat powinien wspominać o błędnym QR");
+    });
+%}
+
+### 8. RAPORTY: Pobranie logów pracownika
+# Endpoint: /logi/
+# Cel: Sprawdzenie czy próby wejścia (udana i nieudana) zapisały się w historii.
+GET {{baseUrl}}/logi/?pracownik_id={{pracownikDbId}}
+
+> {%
+    client.test("Logs exist", function() {
+        client.assert(response.body.length >= 1, "Powinien być co najmniej jeden wpis w logach");
+        client.assert(response.body[0].bramka_id == client.global.get("bramkaId"), "ID bramki w logu musi się zgadzać");
+    });
+%}
+
+### 9. CLEANUP: Usunięcie pracownika
+# Endpoint: /pracownik/{id}
+# Cel: Posprzątanie po testach.
+DELETE {{baseUrl}}/pracownik/{{pracownikDbId}}
