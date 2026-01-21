@@ -8,7 +8,7 @@ def send_qr_email(recipient_email: str, employee_name: str, qr_bytes: bytes):
     Wysyła wiadomość email z załączonym kodem QR (w formacie PNG).
     """
     # Pobieranie konfiguracji ze zmiennych środowiskowych (z docker-compose)
-    mail_server = "mailhog"
+    mail_server = os.getenv("MAIL_SERVER", "mailhog")
     mail_port = int(os.getenv("MAIL_PORT", 1025))
     mail_from = os.getenv("MAIL_FROM", "no-reply@qr-system.local")
 
