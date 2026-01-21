@@ -22,7 +22,7 @@ class Pracownik(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     administrator_id = Column(Integer, ForeignKey("administrator.id"), nullable=False)
-    id_pracownika = Column(String, unique=True, nullable=False) # To będzie np. nazwa folderu ze zdjęciami
+    id_pracownika = Column(String, unique=True, nullable=False)
     imie = Column(String, nullable=False)
     nazwisko = Column(String, nullable=False)
     stanowisko = Column(String)
@@ -33,9 +33,26 @@ class Pracownik(Base):
 
     # Relacje
     administrator = relationship("Administrator", back_populates="pracownicy")
-    przepustka = relationship("Przepustka", back_populates="pracownik", uselist=False)
-    zdjecia = relationship("ZdjecieReferencyjne", back_populates="pracownik")
-    proby_wejscia = relationship("ProbaWejscia", back_populates="pracownik")
+
+    # Wszystkie poniższe linie muszą być równo z linią 'administrator' powyżej
+    przepustka = relationship(
+        "Przepustka",
+        back_populates="pracownik",
+        uselist=False,
+        cascade="all, delete-orphan"
+    )
+
+    zdjecia = relationship(
+        "ZdjecieReferencyjne",
+        back_populates="pracownik",
+        cascade="all, delete-orphan"
+    )
+
+    proby_wejscia = relationship(
+        "ProbaWejscia",
+        back_populates="pracownik",
+        cascade="all, delete-orphan"
+    )
 
 class Przepustka(Base):
     __tablename__ = "przepustka"

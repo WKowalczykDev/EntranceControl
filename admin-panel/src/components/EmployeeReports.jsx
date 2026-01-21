@@ -8,6 +8,21 @@ const EmployeeReports = ({ employees }) => {
     const [recentLogs, setRecentLogs] = useState([]);
     const [loading, setLoading] = useState(false);
 
+    // Funkcja pomocnicza: Czy status oznacza sukces?
+    const isSuccess = (status) => {
+        const s = status ? status.toUpperCase() : "";
+        return ["GRANTED", "MATCH", "SUKCES", "OK"].includes(s);
+    };
+
+    // Funkcja pomocnicza: Normalizacja procentów (naprawa błędu 4899%)
+    const normalizeConfidence = (val) => {
+        if (val === null || val === undefined) return 0;
+        // Jeśli wartość > 1 (np. 97.9), to już jest procent -> zwróć bez zmian
+        if (val > 1.0) return val;
+        // Jeśli wartość <= 1 (np. 0.97), to ułamek -> pomnóż przez 100
+        return val * 100;
+    };
+
     useEffect(() => {
         const fetchLogs = async () => {
             if (!selectedDbId) {
@@ -19,12 +34,22 @@ const EmployeeReports = ({ employees }) => {
             try {
                 const logs = await api.getEmployeeLogs(selectedDbId);
 
-                const entries = logs.filter(l => l.status_finalny === 'GRANTED').length;
-                const denied = logs.filter(l => l.status_finalny !== 'GRANTED').length;
+                // 1. Liczenie statystyk z uwzględnieniem różnych nazw statusów
+                const entries = logs.filter(l => isSuccess(l.status_finalny)).length;
+
+                // Odmowy to wszystko co nie jest sukcesem
+                const denied = logs.filter(l => !isSuccess(l.status_finalny)).length;
+
                 const suspicious = logs.filter(l => l.podejrzana || (l.wynik_qr === 'OK' && l.wynik_biometryczny === 'NO_MATCH')).length;
 
-                const totalConf = logs.reduce((acc, curr) => acc + (curr.procent_podobienstwa || 0), 0);
-                const avgConf = logs.length ? Math.round((totalConf / logs.length) * 100) : 0;
+                // 2. Obliczanie średniej zgodności (naprawa matematyki)
+                // Najpierw normalizujemy każdą wartość do skali 0-100, potem sumujemy
+                const totalConf = logs.reduce((acc, curr) => {
+                    const val = curr.procent_podobienstwa || 0;
+                    return acc + normalizeConfidence(val);
+                }, 0);
+
+                const avgConf = logs.length ? Math.round(totalConf / logs.length) : 0;
 
                 setStats({ entries, denied, suspicious, efficiency: avgConf });
                 setRecentLogs(logs);
@@ -38,9 +63,15 @@ const EmployeeReports = ({ employees }) => {
     }, [selectedDbId]);
 
     const getStatusStyle = (status) => {
-        if (status === 'GRANTED') return 'bg-green-100 text-green-700 border-green-200';
-        if (status === 'DENIED') return 'bg-red-100 text-red-700 border-red-200';
+        if (isSuccess(status)) return 'bg-green-100 text-green-700 border-green-200';
+        if (status?.includes('DENIED') || status === 'NO_MATCH' || status?.includes('ODMOWA')) return 'bg-red-100 text-red-700 border-red-200';
         return 'bg-gray-100 text-gray-700 border-gray-200';
+    };
+
+    const getStatusLabel = (status) => {
+        if (isSuccess(status)) return "SUKCES";
+        if (status?.includes('DENIED') || status === 'NO_MATCH') return "ODMOWA";
+        return status || "-";
     };
 
     return (
@@ -68,7 +99,7 @@ const EmployeeReports = ({ employees }) => {
                         <div className="bg-white p-5 rounded-2xl shadow-sm border border-green-100 text-center"><span className="text-2xl font-bold">{stats.entries}</span><div className="text-xs text-gray-500 uppercase">Przyznane</div></div>
                         <div className="bg-white p-5 rounded-2xl shadow-sm border border-red-100 text-center"><span className="text-2xl font-bold">{stats.denied}</span><div className="text-xs text-gray-500 uppercase">Odmowy</div></div>
                         <div className="bg-white p-5 rounded-2xl shadow-sm border border-orange-100 text-center"><span className="text-2xl font-bold text-orange-600">{stats.suspicious}</span><div className="text-xs text-gray-500 uppercase">Incydenty</div></div>
-                        <div className="bg-white p-5 rounded-2xl shadow-sm border border-indigo-100 text-center relative overflow-hidden"><span className="text-2xl font-bold relative z-10">{stats.efficiency}%</span><div className="text-xs text-gray-500 uppercase relative z-10">Zgodność twarzy</div><div className="absolute bottom-0 left-0 h-1.5 bg-indigo-500" style={{ width: `${stats.efficiency}%` }}></div></div>
+                        <div className="bg-white p-5 rounded-2xl shadow-sm border border-indigo-100 text-center relative overflow-hidden"><span className="text-2xl font-bold relative z-10">{stats.efficiency}%</span><div className="text-xs text-gray-500 uppercase relative z-10">Zgodność twarzy</div><div className="absolute bottom-0 left-0 h-1.5 bg-indigo-500" style={{ width: `${Math.min(stats.efficiency, 100)}%` }}></div></div>
                     </div>
 
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -82,8 +113,17 @@ const EmployeeReports = ({ employees }) => {
                                     <td className="px-6 py-4 font-mono text-gray-600">{new Date(log.data_czas).toLocaleString()}</td>
                                     <td className="px-6 py-4">{log.bramka_id || '-'}</td>
                                     <td className="px-6 py-4">{log.wynik_qr}</td>
-                                    <td className="px-6 py-4">{(log.procent_podobienstwa * 100).toFixed(1)}%</td>
-                                    <td className="px-6 py-4"><span className={`px-2 py-1 rounded text-xs font-bold ${getStatusStyle(log.status_finalny)}`}>{log.status_finalny}</span></td>
+
+                                    {/* TUTAJ BYŁ BŁĄD PROCENTÓW - TERAZ JEST NAPRAWIONY */}
+                                    <td className="px-6 py-4">
+                                        {normalizeConfidence(log.procent_podobienstwa).toFixed(1)}%
+                                    </td>
+
+                                    <td className="px-6 py-4">
+                                        <span className={`px-2 py-1 rounded text-xs font-bold ${getStatusStyle(log.status_finalny)}`}>
+                                            {getStatusLabel(log.status_finalny)}
+                                        </span>
+                                    </td>
                                 </tr>
                             ))}
                             </tbody>

@@ -78,14 +78,17 @@ CREATE TABLE zdjecie_referencyjne (
 CREATE TABLE proba_wejscia (
                                id SERIAL PRIMARY KEY,
                                bramka_id INT NOT NULL,
-                               pracownik_id INT,
+                               pracownik_id INT, -- Może być NULL (dla nieznanych osób)
                                data_czas TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                                wynik_qr VARCHAR(50),
                                wynik_biometryczny VARCHAR(50),
-                               procent_podobienstwa FLOAT,
-                               status_finalny VARCHAR(50) NOT NULL,
+                               confidence FLOAT,
+                               status VARCHAR(50) NOT NULL,
                                sciezka_zdjecia VARCHAR(255),
                                podejrzana BOOLEAN DEFAULT FALSE,
+
                                CONSTRAINT fk_proba_bramka FOREIGN KEY (bramka_id) REFERENCES bramka(id),
-                               CONSTRAINT fk_proba_pracownik FOREIGN KEY (pracownik_id) REFERENCES pracownik(id)
+
+
+                               CONSTRAINT fk_proba_pracownik FOREIGN KEY (pracownik_id) REFERENCES pracownik(id) ON DELETE CASCADE
 );
