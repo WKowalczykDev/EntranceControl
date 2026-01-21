@@ -65,6 +65,14 @@ services:
     depends_on:
       - fastapi_app
 
+   #mail-hog
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: qr_mailhog
+    ports:
+      - "1025:1025"   # SMTP – aplikacja wysyła maile tutaj
+      - "8025:8025"   # Web UI – podgląd wiadomości
+
 volumes:
   postgres_data:
   pgadmin_data:

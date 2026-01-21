@@ -16,6 +16,8 @@ from schemas import PracownikCreate, PracownikResponse, PrzepustkaCreate, Verifi
 # System rozpoznawania twarzy
 from face_recognition_system import verify_face, update_person_embedding
 
+from fastapi import BackgroundTasks
+from email_utils import send_qr_email
 # Inicjalizacja bazy danych
 Base.metadata.create_all(bind=engine)
 
@@ -151,8 +153,12 @@ async def pobierz_pracownikow(db: Session = Depends(get_db)):
 # ==========================================
 
 @app.post("/przepustka/generuj")
-async def generuj_przepustke_qr(dane: PrzepustkaCreate, db: Session = Depends(get_db)):
-    """Generuje kod QR: UID:{id_pracownika}."""
+async def generuj_przepustke_qr(
+        dane: PrzepustkaCreate,
+        background_tasks: BackgroundTasks,  # <--- Wstrzyknięcie zadań w tle
+        db: Session = Depends(get_db)
+):
+    """Generuje kod QR i wysyła go mailem."""
     pracownik = db.query(Pracownik).filter(Pracownik.id == dane.pracownik_id).first()
     if not pracownik:
         raise HTTPException(status_code=404, detail="Pracownik nie istnieje")
@@ -160,15 +166,16 @@ async def generuj_przepustke_qr(dane: PrzepustkaCreate, db: Session = Depends(ge
     # Format danych w QR: UID:jan_kowalski_01
     qr_content = f"UID:{pracownik.id_pracownika}"
 
-    # Sprawdzenie czy już ma aktywną
-    if db.query(Przepustka).filter(Przepustka.pracownik_id == pracownik.id, Przepustka.aktywna == True).first():
-        # Dla celów testowych można tu pozwolić na nadpisanie lub rzucić błąd
-        pass
+    # Logika zapisu w bazie (bez zmian)
+    existing_pass = db.query(Przepustka).filter(Przepustka.pracownik_id == pracownik.id).first()
+    if existing_pass:
+        existing_pass.aktywna = False  # Dezaktywuj starą jeśli istnieje
 
     nowa_przepustka = Przepustka(
         pracownik_id=pracownik.id,
         kod_qr=qr_content,
-        data_waznosci=dane.data_waznosci
+        data_waznosci=dane.data_waznosci,
+        aktywna=True
     )
     db.add(nowa_przepustka)
     db.commit()
@@ -179,9 +186,25 @@ async def generuj_przepustke_qr(dane: PrzepustkaCreate, db: Session = Depends(ge
     qr.make(fit=True)
     img = qr.make_image(fill_color="black", back_color="white")
 
+    # Zapis do bufora pamięci
     buf = BytesIO()
     img.save(buf, format='PNG')
+
+    # Pobieramy bajty obrazka, aby wysłać je mailem
+    qr_bytes = buf.getvalue()
+
+    # Resetujemy wskaźnik bufora na początek dla StreamingResponse
     buf.seek(0)
+
+    # --- WYSYŁKA MAILA W TLE ---
+    if pracownik.email:
+        background_tasks.add_task(
+            send_qr_email,
+            recipient_email=pracownik.email,
+            employee_name=f"{pracownik.imie} {pracownik.nazwisko}",
+            qr_bytes=qr_bytes
+        )
+    # ---------------------------
 
     return StreamingResponse(buf, media_type="image/png")
 
