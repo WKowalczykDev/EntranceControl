@@ -53,7 +53,11 @@ async def stworz_bramke(bramka: BramkaCreate, db: Session = Depends(get_db)):
     db.refresh(nowa_bramka)
     return {"msg": "Bramka utworzona", "id": nowa_bramka.id}
 
-
+@app.get("/setup/bramki")
+async def pobierz_bramki(db: Session = Depends(get_db)):
+    """Zwraca listę wszystkich zarejestrowanych bramek."""
+    bramki = db.query(Bramka).all()
+    return bramki
 @app.post("/setup/admin")
 async def stworz_admina(db: Session = Depends(get_db)):
     """Tworzy domyślnego administratora wymaganego do relacji."""
