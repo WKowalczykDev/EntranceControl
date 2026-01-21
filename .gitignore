@@ -36,3 +36,6 @@ reference_faces/
 # === BEZPIECZEŃSTWO ===
 # Plik ze zmiennymi środowiskowymi (hasła!)
 .env
+
+#kde wojtka
+*.kate-swp
